@@ -56,10 +56,22 @@ app.post("/slack/command", async (req, res) => {
     // Call OpenAI to rephrase
     const response = await axios.post("https://api.openai.com/v1/chat/completions", {
       model: "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: "You are a helpful assistant who rewrites text in grammatically correct and natural English." },
-        { role: "user", content: `Rephrase this: "${text}"` }
-      ]
+	messages: [
+	  {
+		role: "system",
+		content: `
+	You are a helpful assistant that:
+	- Detects the language of the input.
+	- If the input is not in English, translate it to natural, fluent English.
+	- If the input is in English but ungrammatical or unnatural, rewrite it to be grammatically correct and fluent.
+	- Keep the meaning the same. Make it sound like a native speaker wrote it.
+		`.trim()
+	  },
+	  {
+		role: "user",
+		content: text
+	  }
+	]
     }, {
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
