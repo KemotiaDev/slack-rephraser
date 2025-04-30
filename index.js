@@ -77,7 +77,7 @@ app.post("/slack/command", async (req, res) => {
 
 		// Respond to Slack
 		await axios.post(response_url, {
-			response_type: "in_channel", // or "ephemeral" if you want only the user to see
+			response_type: "ephemeral",
 			text: `💡 *Rephrased:* ${rephrased}`
 		});
 
