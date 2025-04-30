@@ -78,7 +78,7 @@ app.post("/slack/command", async (req, res) => {
 		// Respond to Slack
 		await axios.post(response_url, {
 			response_type: "ephemeral",
-			text: `💡 ${rephrased}`
+			text: `💡 *Rephrased:*\n\`\`\`\n${rephrased}\n\`\`\``
 		});
 
 		res.status(200).end(); // Ack the slash command quickly
