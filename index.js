@@ -45,5 +45,43 @@ app.post("/slack/actions", async (req, res) => {
 	}
 });
 
+app.post("/slack/command", async (req, res) => {
+  const { text, user_name, response_url } = req.body;
+
+  if (!text) {
+    return res.send("Please provide text to rephrase, like `/rephrase I no understand`");
+  }
+
+  try {
+    // Call OpenAI to rephrase
+    const response = await axios.post("https://api.openai.com/v1/chat/completions", {
+      model: "gpt-4",
+      messages: [
+        { role: "system", content: "You are a helpful assistant who rewrites text in grammatically correct and natural English." },
+        { role: "user", content: `Rephrase this: "${text}"` }
+      ]
+    }, {
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    const rephrased = response.data.choices[0].message.content.trim();
+
+    // Respond to Slack
+    await axios.post(response_url, {
+      response_type: "in_channel", // or "ephemeral" if you want only the user to see
+      text: `💡 *Rephrased:* ${rephrased}`
+    });
+
+    res.status(200).end(); // Ack the slash command quickly
+  } catch (error) {
+    console.error("OpenAI error:", error);
+    res.send("Something went wrong while rephrasing.");
+  }
+});
+
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Slack rephraser listening on port ${PORT}`));
