@@ -15,7 +15,7 @@ app.post("/slack/actions", async (req, res) => {
 		const response = await axios.post("https://api.openai.com/v1/chat/completions", {
 			model: "gpt-3.5-turbo",
 			messages: [
-				{ role: "system", content: "You are a helpful assistant who rewrites text in grammatically correct and natural English." },
+				{ role: "system", content: "You are a helpful assistant. Translate non-English input into fluent English. If input is already English, rewrite it to be grammatically correct and natural." },
 				{ role: "user", content: `Rephrase this: "${originalText}"` }
 			]
 		}, {
@@ -46,46 +46,46 @@ app.post("/slack/actions", async (req, res) => {
 });
 
 app.post("/slack/command", async (req, res) => {
-  const { text, user_name, response_url } = req.body;
+	const { text, user_name, response_url } = req.body;
 
-  if (!text) {
-    return res.send("Please provide text to rephrase, like `/rephrase I no understand`");
-  }
+	if (!text) {
+		return res.send("Please provide text to rephrase, like `/rephrase I no understand`");
+	}
 
-  try {
-    // Call OpenAI to rephrase
-    const response = await axios.post("https://api.openai.com/v1/chat/completions", {
-      model: "gpt-3.5-turbo",
-	messages: [
-		{
-		  role: "system",
-		  content: "You are a helpful assistant. Translate non-English input into fluent English. If input is already English, rewrite it to be grammatically correct and natural."
-		}
-	  {
-		role: "user",
-		content: text
-	  }
-	]
-    }, {
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json"
-      }
-    });
+	try {
+		// Call OpenAI to rephrase
+		const response = await axios.post("https://api.openai.com/v1/chat/completions", {
+			model: "gpt-3.5-turbo",
+			messages: [
+				{
+					role: "system",
+					content: "You are a helpful assistant. Translate non-English input into fluent English. If input is already English, rewrite it to be grammatically correct and natural."
+				},
+				{
+					role: "user",
+					content: text
+				}
+			]
+		}, {
+			headers: {
+				Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+				"Content-Type": "application/json"
+			}
+		});
 
-    const rephrased = response.data.choices[0].message.content.trim();
+		const rephrased = response.data.choices[0].message.content.trim();
 
-    // Respond to Slack
-    await axios.post(response_url, {
-      response_type: "in_channel", // or "ephemeral" if you want only the user to see
-      text: `💡 *Rephrased:* ${rephrased}`
-    });
+		// Respond to Slack
+		await axios.post(response_url, {
+			response_type: "in_channel", // or "ephemeral" if you want only the user to see
+			text: `💡 *Rephrased:* ${rephrased}`
+		});
 
-    res.status(200).end(); // Ack the slash command quickly
-  } catch (error) {
-    console.error("OpenAI error:", error);
-    res.send("Something went wrong while rephrasing.");
-  }
+		res.status(200).end(); // Ack the slash command quickly
+	} catch (error) {
+		console.error("OpenAI error:", error);
+		res.send("Something went wrong while rephrasing.");
+	}
 });
 
 
