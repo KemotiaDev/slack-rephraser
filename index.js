@@ -13,7 +13,7 @@ app.post("/slack/actions", async (req, res) => {
 		const originalText = payload.message.text;
 
 		const response = await axios.post("https://api.openai.com/v1/chat/completions", {
-			model: "gpt-4",
+			model: "gpt-3.5-turbo",
 			messages: [
 				{ role: "system", content: "You are a helpful assistant who rewrites text in grammatically correct and natural English." },
 				{ role: "user", content: `Rephrase this: "${originalText}"` }
@@ -55,7 +55,7 @@ app.post("/slack/command", async (req, res) => {
   try {
     // Call OpenAI to rephrase
     const response = await axios.post("https://api.openai.com/v1/chat/completions", {
-      model: "gpt-4",
+      model: "gpt-3.5-turbo",
       messages: [
         { role: "system", content: "You are a helpful assistant who rewrites text in grammatically correct and natural English." },
         { role: "user", content: `Rephrase this: "${text}"` }
