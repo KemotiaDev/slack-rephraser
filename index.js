@@ -1,51 +1,51 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const axios = require("axios");
+const crypto = require("crypto");
 require("dotenv").config();
 
+// Get Slack Signing Secret from environment variables
+const slackSigningSecret = process.env.SLACK_SIGNING_SECRET;
 const app = express();
+
+// Function to validate Slack request
+function isValidSlackRequest(req) {
+	const signature = req.headers["x-slack-signature"];
+	const requestTimestamp = req.headers["x-slack-request-timestamp"];
+	const body = JSON.stringify(req.body);
+
+	// Prevent replay attacks by rejecting requests older than 5 minutes
+	if (Math.abs(Date.now() / 1000 - requestTimestamp) > 60 * 5) {
+		return false;
+	}
+
+	// Create the signature base string
+	const sigBaseString = `v0:${requestTimestamp}:${body}`;
+	const hmac = crypto.createHmac("sha256", slackSigningSecret);
+	const computedSignature = `v0=${hmac.update(sigBaseString).digest("hex")}`;
+
+	// Compare Slack's signature with the computed one
+	return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(computedSignature));
+}
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-app.post("/slack/actions", async (req, res) => {
-	const payload = JSON.parse(req.body.payload);
-	if (payload.type === "message_action" && payload.callback_id === "rephrase_message") {
-		const originalText = payload.message.text;
-
-		const response = await axios.post("https://api.openai.com/v1/chat/completions", {
-			model: "gpt-3.5-turbo",
-			messages: [
-				{ role: "system", content: "You are a helpful assistant. Translate non-English input into fluent English. If input is already English, rewrite it to be grammatically correct and natural." },
-				{ role: "user", content: `Rephrase this: "${originalText}"` }
-			]
-		}, {
-			headers: {
-				"Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-				"Content-Type": "application/json"
-			}
-		});
-
-		const rephrased = response.data.choices[0].message.content.trim();
-
-		// Respond as a thread reply to the original message
-		const slackRes = await axios.post("https://slack.com/api/chat.postMessage", {
-			channel: payload.channel.id,
-			thread_ts: payload.message.ts,
-			text: `💡 *Rephrased version:*\n${rephrased}`
-		}, {
-			headers: {
-				Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
-				"Content-Type": "application/json"
-			}
-		});
-
-		res.status(200).send(); // Acknowledge action
-	} else {
-		res.status(200).send(); // Acknowledge non-handled action
+app.post("/slack/events", (req, res) => {
+	// Handle URL verification
+	if (req.body.type === "url_verification") {
+		// Echo back the challenge to Slack
+		return res.json({ challenge: req.body.challenge });
 	}
 });
 
 app.post("/slack/command", async (req, res) => {
+	// Validate the Slack request
+	if (!isValidSlackRequest(req)) {
+		console.log("Invalid Slack request");
+		return res.status(400).send("Invalid request");
+	}
+
 	const { text, user_name, response_url } = req.body;
 
 	if (!text) {
@@ -68,7 +68,7 @@ app.post("/slack/command", async (req, res) => {
 			]
 		}, {
 			headers: {
-				Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+				"Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
 				"Content-Type": "application/json"
 			}
 		});
