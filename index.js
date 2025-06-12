@@ -25,10 +25,16 @@ function isValidSlackRequest(req) {
 
 	// Create the signature base string
 	const sigBaseString = `v0:${requestTimestamp}:${body}`;
+	console.log('sigBaseString:', sigBaseString);
+
 	const hmac = crypto.createHmac("sha256", slackSigningSecret);
+	console.log('hmac:', hmac);
 	const computedSignature = `v0=${hmac.update(sigBaseString).digest("hex")}`;
+	console.log('computedSignature:', computedSignature);
 
 	// Compare Slack's signature with the computed one
+	console.log('Comparing signatures:', crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(computedSignature)););
+	
 	return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(computedSignature));
 }
 
