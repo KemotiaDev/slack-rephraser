@@ -8,38 +8,42 @@ require("dotenv").config();
 const slackSigningSecret = process.env.SLACK_SIGNING_SECRET;
 const app = express();
 
-// Function to validate Slack request
 function isValidSlackRequest(req) {
 	const signature = req.headers["x-slack-signature"];
-	console.log('signature:', signature);
 	const requestTimestamp = req.headers["x-slack-request-timestamp"];
-	console.log('requestTimestamp:', requestTimestamp);
-	const body = JSON.stringify(req.body);
-	console.log('body:', body);
+	const body = req.rawBody;
 
-	// Prevent replay attacks by rejecting requests older than 5 minutes
+	if (!signature || !requestTimestamp || !body) return false;
+
 	if (Math.abs(Date.now() / 1000 - requestTimestamp) > 60 * 5) {
 		console.log("Request timestamp is too old");
 		return false;
 	}
 
-	// Create the signature base string
 	const sigBaseString = `v0:${requestTimestamp}:${body}`;
-	console.log('sigBaseString:', sigBaseString);
-
 	const hmac = crypto.createHmac("sha256", slackSigningSecret);
-	console.log('hmac:', hmac);
 	const computedSignature = `v0=${hmac.update(sigBaseString).digest("hex")}`;
-	console.log('computedSignature:', computedSignature);
 
-	// Compare Slack's signature with the computed one
-	console.log('Comparing signatures:', crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(computedSignature)));
-	
-	return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(computedSignature));
+	const valid = crypto.timingSafeEqual(
+		Buffer.from(signature, 'utf8'),
+		Buffer.from(computedSignature, 'utf8')
+	);
+
+	if (!valid) {
+		console.log("Invalid Slack request");
+		console.log("Expected:", computedSignature);
+		console.log("Received:", signature);
+	}
+	return valid;
 }
 
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+// Capture raw body as a string
+app.use(bodyParser.raw({
+	type: '*/*', // Capture all content types (important for Slack)
+	verify: (req, res, buf) => {
+		req.rawBody = buf.toString('utf8');
+	}
+}));
 
 app.post("/slack/events", (req, res) => {
 	// Handle URL verification
@@ -56,8 +60,9 @@ app.post("/slack/command", async (req, res) => {
 		return res.status(400).send("Invalid request");
 	}
 
-	const { text, user_name, response_url } = req.body;
-
+	const parsedBody = qs.parse(req.rawBody);
+	const { text, user_name, response_url } = parsedBody;
+	
 	if (!text) {
 		return res.send("Please provide text to rephrase, like `/rephrase I no understand`");
 	}
