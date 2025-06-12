@@ -33,7 +33,7 @@ function isValidSlackRequest(req) {
 	console.log('computedSignature:', computedSignature);
 
 	// Compare Slack's signature with the computed one
-	console.log('Comparing signatures:', crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(computedSignature)););
+	console.log('Comparing signatures:', crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(computedSignature)));
 	
 	return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(computedSignature));
 }
