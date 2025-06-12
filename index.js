@@ -2,6 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const axios = require("axios");
 const crypto = require("crypto");
+const qs = require("querystring");
 require("dotenv").config();
 
 // Get Slack Signing Secret from environment variables
@@ -62,7 +63,7 @@ app.post("/slack/command", async (req, res) => {
 
 	const parsedBody = qs.parse(req.rawBody);
 	const { text, user_name, response_url } = parsedBody;
-	
+
 	if (!text) {
 		return res.send("Please provide text to rephrase, like `/rephrase I no understand`");
 	}
