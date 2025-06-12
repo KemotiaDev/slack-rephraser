@@ -11,11 +11,15 @@ const app = express();
 // Function to validate Slack request
 function isValidSlackRequest(req) {
 	const signature = req.headers["x-slack-signature"];
+	console.log('signature:', signature);
 	const requestTimestamp = req.headers["x-slack-request-timestamp"];
+	console.log('requestTimestamp:', requestTimestamp);
 	const body = JSON.stringify(req.body);
+	console.log('body:', body);
 
 	// Prevent replay attacks by rejecting requests older than 5 minutes
 	if (Math.abs(Date.now() / 1000 - requestTimestamp) > 60 * 5) {
+		console.log("Request timestamp is too old");
 		return false;
 	}
 
@@ -41,10 +45,10 @@ app.post("/slack/events", (req, res) => {
 
 app.post("/slack/command", async (req, res) => {
 	// Validate the Slack request
-	// if (!isValidSlackRequest(req)) {
-	// 	console.log("Invalid Slack request");
-	// 	return res.status(400).send("Invalid request");
-	// }
+	if (!isValidSlackRequest(req)) {
+		console.log("Invalid Slack request");
+		return res.status(400).send("Invalid request");
+	}
 
 	const { text, user_name, response_url } = req.body;
 
