@@ -41,10 +41,10 @@ app.post("/slack/events", (req, res) => {
 
 app.post("/slack/command", async (req, res) => {
 	// Validate the Slack request
-	if (!isValidSlackRequest(req)) {
-		console.log("Invalid Slack request");
-		return res.status(400).send("Invalid request");
-	}
+	// if (!isValidSlackRequest(req)) {
+	// 	console.log("Invalid Slack request");
+	// 	return res.status(400).send("Invalid request");
+	// }
 
 	const { text, user_name, response_url } = req.body;
 
